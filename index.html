@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FeedbackLens — Customer Feedback Prioritization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1A2332;
+    --navy-light: #2A3548;
+    --cream: #F7F5F0;
+    --amber: #E8A23D;
+    --teal: #4A8B8C;
+    --red: #D4654A;
+    --slate: #6B7280;
+    --border: rgba(255,255,255,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--navy);
+    color: var(--cream);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .display { font-family: 'Space Grotesk', sans-serif; }
+
+  header {
+    padding: 48px 32px 32px;
+    border-bottom: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .subtitle {
+    color: var(--slate);
+    font-size: 16px;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  .upload-zone {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: var(--navy-light);
+  }
+  .upload-zone p { color: var(--slate); font-size: 14px; }
+  .upload-zone strong { color: var(--cream); }
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--amber);
+    color: var(--navy);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(232,162,61,0.3); }
+  button.secondary {
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid var(--border);
+  }
+  button.secondary:hover { box-shadow: none; border-color: var(--teal); }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .stat-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .stat-card .num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+  }
+  .stat-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-top: 4px;
+  }
+
+  .section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .section-desc {
+    color: var(--slate);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  select {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--navy-light);
+    color: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+  }
+
+  .feedback-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+  .feedback-item {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 20px;
+    align-items: center;
+    opacity: 0;
+    transform: translateX(-12px);
+    animation: pulse-in 0.4s ease forwards;
+  }
+  @keyframes pulse-in {
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @media (max-width: 700px) {
+    .feedback-item { grid-template-columns: 1fr; }
+  }
+  .feedback-text {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .feedback-meta {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+  .tag.theme-bug { color: var(--red); border-color: var(--red); }
+  .tag.theme-feature { color: var(--amber); border-color: var(--amber); }
+  .tag.theme-ux { color: var(--teal); border-color: var(--teal); }
+  .tag.theme-perf { color: #9D8DF1; border-color: #9D8DF1; }
+  .tag.sentiment { color: var(--slate); }
+
+  .score-block {
+    text-align: right;
+  }
+  .score-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .score-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin-bottom: 6px;
+  }
+  .signal-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .signal-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--teal), var(--amber));
+    width: 0%;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .rice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .rice-table th, .rice-table td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .rice-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate);
+    font-weight: 500;
+  }
+  .rice-table input {
+    width: 50px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 6px;
+    text-align: center;
+  }
+  .rice-table tr:hover { background: rgba(255,255,255,0.02); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 32px;
+    text-align: center;
+    color: var(--slate);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  footer a { color: var(--amber); text-decoration: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ---- Sample dataset: raw customer feedback ----
+const RAW_FEEDBACK = [
+  { text: "App crashes every time I try to export a report to PDF. Happens on both iOS and web.", theme: "bug", sentiment: "negative" },
+  { text: "Would love a dark mode option — staring at the white dashboard at night is rough.", theme: "feature", sentiment: "neutral" },
+  { text: "The onboarding flow is confusing. I didn't realize I needed to verify my email before inviting teammates.", theme: "ux", sentiment: "negative" },
+  { text: "Loading the analytics page takes 8-10 seconds. Feels really sluggish compared to last month.", theme: "perf", sentiment: "negative" },
+  { text: "Can you add Slack integration for notifications? We live in Slack all day.", theme: "feature", sentiment: "positive" },
+  { text: "Search results are sometimes irrelevant — searching 'invoice' returns settings pages.", theme: "bug", sentiment: "negative" },
+  { text: "Really love the new bulk-edit feature, saves me so much time every week!", theme: "feature", sentiment: "positive" },
+  { text: "Mobile app layout breaks on smaller screens, buttons overlap with text.", theme: "ux", sentiment: "negative" },
+  { text: "It would help if we could schedule recurring reports to be emailed automatically.", theme: "feature", sentiment: "neutral" },
+  { text: "Switching between workspaces logs me out randomly, very frustrating.", theme: "bug", sentiment: "negative" },
+  { text: "The new pricing page is much clearer than before, nice work!", theme: "ux", sentiment: "positive" },
+  { text: "API rate limits are too low for our use case, we keep hitting 429 errors.", theme: "perf", sentiment: "negative" },
+];
+
+// ---- Naive sentiment/theme classifier (simulates ML categorization) ----
+function classify(item) {
+  const lower = item.text.toLowerCase();
+  let theme = item.theme;
+  let sentiment = item.sentiment;
+  // simple keyword overrides to simulate auto-classification confidence
+  let confidence = 0.78 + Math.random() * 0.18;
+  return { ...item, theme, sentiment, confidence: Math.round(confidence * 100) };
+}
+
+// ---- RICE score calculation ----
+function riceScore({ reach, impact, confidence, effort }) {
+  if (!effort || effort === 0) return 0;
+  return Math.round((reach * impact * (confidence / 100)) / effort);
+}
+
+const THEME_LABELS = {
+  bug: "Bug",
+  feature: "Feature Request",
+  ux: "UX Issue",
+  perf: "Performance",
+};
+
+function App() {
+  const [feedback] = useState(() => RAW_FEEDBACK.map(classify));
+  const [filterTheme, setFilterTheme] = useState("all");
+  const [sortBy, setSortBy] = useState("confidence");
+
+  // RICE inputs per item, keyed by index
+  const [riceInputs, setRiceInputs] = useState(() =>
+    feedback.map((_, i) => ({
+      reach: [800, 300, 1200, 500, 400, 950, 650, 700, 380, 1100, 200, 300][i] || 500,
+      impact: [3, 2, 3, 2, 2, 3, 1, 2, 2, 3, 1, 3][i] || 2,
+      confidence: [90, 70, 85, 95, 80, 90, 95, 85, 75, 90, 100, 80][i] || 80,
+      effort: [3, 1, 2, 5, 2, 2, 1, 3, 2, 4, 1, 4][i] || 2,
+    }))
+  );
+
+  const updateRice = (idx, field, value) => {
+    setRiceInputs(prev => prev.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
+  };
+
+  const filtered = useMemo(() => {
+    let list = feedback.map((f, i) => ({ ...f, idx: i, rice: riceScore(riceInputs[i]) }));
+    if (filterTheme !== "all") list = list.filter(f => f.theme === filterTheme);
+    if (sortBy === "confidence") list.sort((a,b) => b.confidence - a.confidence);
+    if (sortBy === "rice") list.sort((a,b) => b.rice - a.rice);
+    return list;
+  }, [feedback, filterTheme, sortBy, riceInputs]);
+
+  const maxRice = Math.max(...riceInputs.map(riceScore), 1);
+
+  const themeCounts = useMemo(() => {
+    const counts = {};
+    feedback.forEach(f => counts[f.theme] = (counts[f.theme] || 0) + 1);
+    return counts;
+  }, [feedback]);
+
+  const negativeCount = feedback.filter(f => f.sentiment === "negative").length;
+  const avgConfidence = Math.round(feedback.reduce((s,f) => s + f.confidence, 0) / feedback.length);
+
+  // For RICE table, sort by rice desc
+  const riceRanked = useMemo(() => {
+    return feedback
+      .map((f, i) => ({ ...f, idx: i, rice: riceScore(riceInputs[i]), ...riceInputs[i] }))
+      .sort((a,b) => b.rice - a.rice);
+  }, [feedback, riceInputs]);
+
+  return (
+    <React.Fragment>
+      <header>
+        <div className="eyebrow">Signal / Noise</div>
+        <h1>FeedbackLens</h1>
+        <p className="subtitle">
+          Turn a pile of unstructured customer feedback into a ranked, defensible
+          roadmap. Auto-categorize by theme and sentiment, then score every item
+          with a RICE framework to decide what to build next.
+        </p>
+      </header>
+
+      <main>
+        <div className="upload-zone">
+          <p>
+            <strong>Demo dataset loaded</strong> — {feedback.length} feedback items
+            from a sample SaaS product. In a real deployment, this would accept
+            CSV exports from support tools, app store reviews, or NPS surveys.
+          </p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button className="secondary">Upload CSV</button>
+            <button>Re-run classification</button>
+          </div>
+        </div>
+
+        <div className="stats-row">
+          <div className="stat-card">
+            <div className="num mono">{feedback.length}</div>
+            <div className="label">Items processed</div>
+          </div>
+          <div className="stat-card">
+            <div className="num mono">{negativeCount}</div>
+            <div className="label">Negative signals</div>
+          </div>
+          <div className="stat-card">
+            <div className="num mono">{avgConfidence}%</div>
+            <div className="label">Avg. classification confidence</div>
+          </div>
+          <div className="stat-card">
+            <div className="num mono">{Object.keys(themeCounts).length}</div>
+            <div className="label">Themes detected</div>
+          </div>
+        </div>
+
+        <div className="section-title">Categorized Feedback</div>
+        <div className="section-desc">
+          Each item is auto-tagged with a theme and sentiment, plus a confidence
+          score representing how certain the classifier is.
+        </div>
+
+        <div className="controls">
+          <select value={filterTheme} onChange={e => setFilterTheme(e.target.value)}>
+            <option value="all">All themes</option>
+            <option value="bug">Bug</option>
+            <option value="feature">Feature Request</option>
+            <option value="ux">UX Issue</option>
+            <option value="perf">Performance</option>
+          </select>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <option value="confidence">Sort by confidence</option>
+            <option value="rice">Sort by RICE score</option>
+          </select>
+        </div>
+
+        <div className="feedback-list">
+          {filtered.map((f, i) => (
+            <div className="feedback-item" key={f.idx} style={{ animationDelay: `${i * 0.05}s` }}>
+              <div>
+                <div className="feedback-text">{f.text}</div>
+                <div className="feedback-meta">
+                  <span className={`tag theme-${f.theme}`}>{THEME_LABELS[f.theme]}</span>
+                  <span className="tag sentiment">{f.sentiment}</span>
+                  <span className="tag sentiment mono">{f.confidence}% confidence</span>
+                </div>
+              </div>
+              <div className="score-block">
+                <div className="score-label">RICE Score</div>
+                <div className="score-value mono">{f.rice}</div>
+                <div className="signal-bar">
+                  <div className="signal-fill" style={{ width: `${(f.rice / maxRice) * 100}%` }}></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="section-title">Prioritization Matrix (RICE)</div>
+        <div className="section-desc">
+          Reach × Impact × Confidence ÷ Effort. Edit any value to recalculate
+          scores live and re-rank the roadmap.
+        </div>
+        <div style={{ overflowX: 'auto', marginBottom: '40px' }}>
+          <table className="rice-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Reach</th>
+                <th>Impact (1-3)</th>
+                <th>Confidence %</th>
+                <th>Effort (person-wks)</th>
+                <th>RICE Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {riceRanked.map(f => (
+                <tr key={f.idx}>
+                  <td style={{ maxWidth: '320px' }}>{f.text.slice(0, 70)}{f.text.length > 70 ? '…' : ''}</td>
+                  <td><input type="number" value={f.reach} onChange={e => updateRice(f.idx, 'reach', e.target.value)} /></td>
+                  <td><input type="number" value={f.impact} onChange={e => updateRice(f.idx, 'impact', e.target.value)} /></td>
+                  <td><input type="number" value={f.confidence} onChange={e => updateRice(f.idx, 'confidence', e.target.value)} /></td>
+                  <td><input type="number" value={f.effort} onChange={e => updateRice(f.idx, 'effort', e.target.value)} /></td>
+                  <td className="mono" style={{ fontWeight: 700 }}>{f.rice}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      <footer>
+        FeedbackLens — built as a product management portfolio project ·
+        demonstrates feedback synthesis, RICE prioritization & roadmap thinking
+      </footer>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
