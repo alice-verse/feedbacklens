@@ -36,7 +36,7 @@ Just open `index.html` in a browser. No installation needed.
 1. Push this repo to GitHub
 2. Go to **Settings → Pages**
 3. Set source to `main` branch, root folder
-4. Your live demo will be at `https://<username>.github.io/<repo-name>/`
+4. Your live demo will be at https://6a4c3ee8d47fe3a99fefbc78--feedbacklen.netlify.app/
 
 ## Possible extensions
 
