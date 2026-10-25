@@ -1,500 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FeedbackLens — Customer Feedback Prioritization</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FeedbackLens AI</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --navy: #1A2332;
-    --navy-light: #2A3548;
-    --cream: #F7F5F0;
-    --amber: #E8A23D;
-    --teal: #4A8B8C;
-    --red: #D4654A;
-    --slate: #6B7280;
-    --border: rgba(255,255,255,0.08);
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--navy);
-    color: var(--cream);
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-  }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-  .display { font-family: 'Space Grotesk', sans-serif; }
-
-  header {
-    padding: 48px 32px 32px;
-    border-bottom: 1px solid var(--border);
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  .eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--amber);
-    margin-bottom: 12px;
-  }
-  h1 {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(32px, 5vw, 52px);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    margin-bottom: 12px;
-  }
-  .subtitle {
-    color: var(--slate);
-    font-size: 16px;
-    max-width: 600px;
-    line-height: 1.6;
-  }
-
-  main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px;
-  }
-
-  .upload-zone {
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-    background: var(--navy-light);
-  }
-  .upload-zone p { color: var(--slate); font-size: 14px; }
-  .upload-zone strong { color: var(--cream); }
-  button {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    background: var(--amber);
-    color: var(--navy);
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    transition: transform 0.1s ease, box-shadow 0.15s ease;
-  }
-  button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(232,162,61,0.3); }
-  button.secondary {
-    background: transparent;
-    color: var(--cream);
-    border: 1px solid var(--border);
-  }
-  button.secondary:hover { box-shadow: none; border-color: var(--teal); }
-
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 16px;
-    margin-bottom: 40px;
-  }
-  .stat-card {
-    background: var(--navy-light);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-  }
-  .stat-card .num {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 32px;
-    font-weight: 700;
-  }
-  .stat-card .label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--slate);
-    margin-top: 4px;
-  }
-
-  .section-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-  .section-desc {
-    color: var(--slate);
-    font-size: 13px;
-    margin-bottom: 20px;
-  }
-
-  .controls {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-  select {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    background: var(--navy-light);
-    color: var(--cream);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 8px 12px;
-  }
-
-  .feedback-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 48px;
-  }
-  .feedback-item {
-    background: var(--navy-light);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 18px 20px;
-    display: grid;
-    grid-template-columns: 1fr 220px;
-    gap: 20px;
-    align-items: center;
-    opacity: 0;
-    transform: translateX(-12px);
-    animation: pulse-in 0.4s ease forwards;
-  }
-  @keyframes pulse-in {
-    to { opacity: 1; transform: translateX(0); }
-  }
-  @media (max-width: 700px) {
-    .feedback-item { grid-template-columns: 1fr; }
-  }
-  .feedback-text {
-    font-size: 14px;
-    line-height: 1.6;
-  }
-  .feedback-meta {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-    flex-wrap: wrap;
-  }
-  .tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 3px;
-    border: 1px solid var(--border);
-  }
-  .tag.theme-bug { color: var(--red); border-color: var(--red); }
-  .tag.theme-feature { color: var(--amber); border-color: var(--amber); }
-  .tag.theme-ux { color: var(--teal); border-color: var(--teal); }
-  .tag.theme-perf { color: #9D8DF1; border-color: #9D8DF1; }
-  .tag.sentiment { color: var(--slate); }
-
-  .score-block {
-    text-align: right;
-  }
-  .score-value {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 28px;
-    font-weight: 700;
-  }
-  .score-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--slate);
-    margin-bottom: 6px;
-  }
-  .signal-bar {
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(255,255,255,0.06);
-    overflow: hidden;
-    margin-top: 8px;
-  }
-  .signal-fill {
-    height: 100%;
-    border-radius: 3px;
-    background: linear-gradient(90deg, var(--teal), var(--amber));
-    width: 0%;
-    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .rice-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  .rice-table th, .rice-table td {
-    text-align: left;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .rice-table th {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--slate);
-    font-weight: 500;
-  }
-  .rice-table input {
-    width: 50px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--cream);
-    font-family: 'JetBrains Mono', monospace;
-    padding: 4px 6px;
-    text-align: center;
-  }
-  .rice-table tr:hover { background: rgba(255,255,255,0.02); }
-
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 24px 32px;
-    text-align: center;
-    color: var(--slate);
-    font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.05em;
-  }
-  footer a { color: var(--amber); text-decoration: none; }
-</style>
-</head>
-<body>
-<div id="root"></div>
-
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<script type="text/babel">
-const { useState, useMemo } = React;
-
-// ---- Sample dataset: raw customer feedback ----
-const RAW_FEEDBACK = [
-  { text: "App crashes every time I try to export a report to PDF. Happens on both iOS and web.", theme: "bug", sentiment: "negative" },
-  { text: "Would love a dark mode option — staring at the white dashboard at night is rough.", theme: "feature", sentiment: "neutral" },
-  { text: "The onboarding flow is confusing. I didn't realize I needed to verify my email before inviting teammates.", theme: "ux", sentiment: "negative" },
-  { text: "Loading the analytics page takes 8-10 seconds. Feels really sluggish compared to last month.", theme: "perf", sentiment: "negative" },
-  { text: "Can you add Slack integration for notifications? We live in Slack all day.", theme: "feature", sentiment: "positive" },
-  { text: "Search results are sometimes irrelevant — searching 'invoice' returns settings pages.", theme: "bug", sentiment: "negative" },
-  { text: "Really love the new bulk-edit feature, saves me so much time every week!", theme: "feature", sentiment: "positive" },
-  { text: "Mobile app layout breaks on smaller screens, buttons overlap with text.", theme: "ux", sentiment: "negative" },
-  { text: "It would help if we could schedule recurring reports to be emailed automatically.", theme: "feature", sentiment: "neutral" },
-  { text: "Switching between workspaces logs me out randomly, very frustrating.", theme: "bug", sentiment: "negative" },
-  { text: "The new pricing page is much clearer than before, nice work!", theme: "ux", sentiment: "positive" },
-  { text: "API rate limits are too low for our use case, we keep hitting 429 errors.", theme: "perf", sentiment: "negative" },
-];
-
-// ---- Naive sentiment/theme classifier (simulates ML categorization) ----
-function classify(item) {
-  const lower = item.text.toLowerCase();
-  let theme = item.theme;
-  let sentiment = item.sentiment;
-  // simple keyword overrides to simulate auto-classification confidence
-  let confidence = 0.78 + Math.random() * 0.18;
-  return { ...item, theme, sentiment, confidence: Math.round(confidence * 100) };
-}
-
-// ---- RICE score calculation ----
-function riceScore({ reach, impact, confidence, effort }) {
-  if (!effort || effort === 0) return 0;
-  return Math.round((reach * impact * (confidence / 100)) / effort);
-}
-
-const THEME_LABELS = {
-  bug: "Bug",
-  feature: "Feature Request",
-  ux: "UX Issue",
-  perf: "Performance",
-};
-
-function App() {
-  const [feedback] = useState(() => RAW_FEEDBACK.map(classify));
-  const [filterTheme, setFilterTheme] = useState("all");
-  const [sortBy, setSortBy] = useState("confidence");
-
-  // RICE inputs per item, keyed by index
-  const [riceInputs, setRiceInputs] = useState(() =>
-    feedback.map((_, i) => ({
-      reach: [800, 300, 1200, 500, 400, 950, 650, 700, 380, 1100, 200, 300][i] || 500,
-      impact: [3, 2, 3, 2, 2, 3, 1, 2, 2, 3, 1, 3][i] || 2,
-      confidence: [90, 70, 85, 95, 80, 90, 95, 85, 75, 90, 100, 80][i] || 80,
-      effort: [3, 1, 2, 5, 2, 2, 1, 3, 2, 4, 1, 4][i] || 2,
-    }))
-  );
-
-  const updateRice = (idx, field, value) => {
-    setRiceInputs(prev => prev.map((r, i) => i === idx ? { ...r, [field]: Number(value) } : r));
-  };
-
-  const filtered = useMemo(() => {
-    let list = feedback.map((f, i) => ({ ...f, idx: i, rice: riceScore(riceInputs[i]) }));
-    if (filterTheme !== "all") list = list.filter(f => f.theme === filterTheme);
-    if (sortBy === "confidence") list.sort((a,b) => b.confidence - a.confidence);
-    if (sortBy === "rice") list.sort((a,b) => b.rice - a.rice);
-    return list;
-  }, [feedback, filterTheme, sortBy, riceInputs]);
-
-  const maxRice = Math.max(...riceInputs.map(riceScore), 1);
-
-  const themeCounts = useMemo(() => {
-    const counts = {};
-    feedback.forEach(f => counts[f.theme] = (counts[f.theme] || 0) + 1);
-    return counts;
-  }, [feedback]);
-
-  const negativeCount = feedback.filter(f => f.sentiment === "negative").length;
-  const avgConfidence = Math.round(feedback.reduce((s,f) => s + f.confidence, 0) / feedback.length);
-
-  // For RICE table, sort by rice desc
-  const riceRanked = useMemo(() => {
-    return feedback
-      .map((f, i) => ({ ...f, idx: i, rice: riceScore(riceInputs[i]), ...riceInputs[i] }))
-      .sort((a,b) => b.rice - a.rice);
-  }, [feedback, riceInputs]);
-
-  return (
-    <React.Fragment>
-      <header>
-        <div className="eyebrow">Signal / Noise</div>
-        <h1>FeedbackLens</h1>
-        <p className="subtitle">
-          Turn a pile of unstructured customer feedback into a ranked, defensible
-          roadmap. Auto-categorize by theme and sentiment, then score every item
-          with a RICE framework to decide what to build next.
-        </p>
-      </header>
-
-      <main>
-        <div className="upload-zone">
-          <p>
-            <strong>Demo dataset loaded</strong> — {feedback.length} feedback items
-            from a sample SaaS product. In a real deployment, this would accept
-            CSV exports from support tools, app store reviews, or NPS surveys.
-          </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="secondary">Upload CSV</button>
-            <button>Re-run classification</button>
-          </div>
-        </div>
-
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="num mono">{feedback.length}</div>
-            <div className="label">Items processed</div>
-          </div>
-          <div className="stat-card">
-            <div className="num mono">{negativeCount}</div>
-            <div className="label">Negative signals</div>
-          </div>
-          <div className="stat-card">
-            <div className="num mono">{avgConfidence}%</div>
-            <div className="label">Avg. classification confidence</div>
-          </div>
-          <div className="stat-card">
-            <div className="num mono">{Object.keys(themeCounts).length}</div>
-            <div className="label">Themes detected</div>
-          </div>
-        </div>
-
-        <div className="section-title">Categorized Feedback</div>
-        <div className="section-desc">
-          Each item is auto-tagged with a theme and sentiment, plus a confidence
-          score representing how certain the classifier is.
-        </div>
-
-        <div className="controls">
-          <select value={filterTheme} onChange={e => setFilterTheme(e.target.value)}>
-            <option value="all">All themes</option>
-            <option value="bug">Bug</option>
-            <option value="feature">Feature Request</option>
-            <option value="ux">UX Issue</option>
-            <option value="perf">Performance</option>
-          </select>
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="confidence">Sort by confidence</option>
-            <option value="rice">Sort by RICE score</option>
-          </select>
-        </div>
-
-        <div className="feedback-list">
-          {filtered.map((f, i) => (
-            <div className="feedback-item" key={f.idx} style={{ animationDelay: `${i * 0.05}s` }}>
-              <div>
-                <div className="feedback-text">{f.text}</div>
-                <div className="feedback-meta">
-                  <span className={`tag theme-${f.theme}`}>{THEME_LABELS[f.theme]}</span>
-                  <span className="tag sentiment">{f.sentiment}</span>
-                  <span className="tag sentiment mono">{f.confidence}% confidence</span>
-                </div>
-              </div>
-              <div className="score-block">
-                <div className="score-label">RICE Score</div>
-                <div className="score-value mono">{f.rice}</div>
-                <div className="signal-bar">
-                  <div className="signal-fill" style={{ width: `${(f.rice / maxRice) * 100}%` }}></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="section-title">Prioritization Matrix (RICE)</div>
-        <div className="section-desc">
-          Reach × Impact × Confidence ÷ Effort. Edit any value to recalculate
-          scores live and re-rank the roadmap.
-        </div>
-        <div style={{ overflowX: 'auto', marginBottom: '40px' }}>
-          <table className="rice-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Reach</th>
-                <th>Impact (1-3)</th>
-                <th>Confidence %</th>
-                <th>Effort (person-wks)</th>
-                <th>RICE Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {riceRanked.map(f => (
-                <tr key={f.idx}>
-                  <td style={{ maxWidth: '320px' }}>{f.text.slice(0, 70)}{f.text.length > 70 ? '…' : ''}</td>
-                  <td><input type="number" value={f.reach} onChange={e => updateRice(f.idx, 'reach', e.target.value)} /></td>
-                  <td><input type="number" value={f.impact} onChange={e => updateRice(f.idx, 'impact', e.target.value)} /></td>
-                  <td><input type="number" value={f.confidence} onChange={e => updateRice(f.idx, 'confidence', e.target.value)} /></td>
-                  <td><input type="number" value={f.effort} onChange={e => updateRice(f.idx, 'effort', e.target.value)} /></td>
-                  <td className="mono" style={{ fontWeight: 700 }}>{f.rice}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
-
-      <footer>
-        FeedbackLens — built as a product management portfolio project ·
-        demonstrates feedback synthesis, RICE prioritization & roadmap thinking
-      </footer>
-    </React.Fragment>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
-</body>
-</html>
+:root{--bg:#EEF1F6;--s:#fff;--ink:#14213D;--mut:#5B6678;--ln:#D8DEE9;--ac:#0B6E99;--pos:#1B8A5A;--neg:#C8412D;--neu:#7A8699;--mix:#B7791F;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0E1626;--s:#16213A;--ink:#E8EDF7;--mut:#9AA6BC;--ln:#2A3858;--ac:#5CC0EA}}
+:root[data-theme=dark]{--bg:#0E1626;--s:#16213A;--ink:#E8EDF7;--mut:#9AA6BC;--ln:#2A3858;--ac:#5CC0EA}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'IBM Plex Sans',system-ui,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 48px}h1{font-size:26px;margin:0}h2{font-size:16px;margin:0 0 10px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.note{background:var(--s);border-left:4px solid var(--mix);padding:8px 12px;margin-bottom:14px;font-size:13px;color:var(--mut)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-bottom:14px}
+.box{background:var(--s);border:1px solid var(--ln);border-radius:8px;padding:14px;min-width:0;margin-bottom:14px}.grid .box{margin:0}
+button,input,select{font:inherit;color:inherit}button{background:var(--ac);color:#fff;border:0;border-radius:6px;padding:8px 12px;cursor:pointer}button.g{background:transparent;color:var(--ink);border:1px solid var(--ln)}
+input,select{background:var(--s);border:1px solid var(--ln);border-radius:6px;padding:7px 9px;min-width:0}:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.row{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:5px 0}.t{height:10px;background:var(--ln);border-radius:5px;overflow:hidden}.t i{display:block;height:100%}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--ln);vertical-align:top}
+.tag{padding:1px 7px;border-radius:9px;color:#fff;font-size:12px}.ev{border-top:1px solid var(--ln);padding:6px 0;font-size:13px}.sm{font-size:12px;color:var(--mut)}
+</style></head><body><main>
+<div class="bar"><div><h1>FeedbackLens AI</h1><div class="sm">Turn customer feedback into a ranked list of what to fix first.</div></div>
+<div><input type="file" id="f" accept=".csv" aria-label="Upload CSV file"> <button class="g" id="demo">Load demo data</button></div></div>
+<div class="note" id="note" aria-live="polite">Upload a CSV with a text column (optional: date, source, rating), or load the demo data.</div>
+<div id="app" hidden>
+<div class="box"><h2>What to fix first</h2><div class="tw"><table id="pri"></table></div><p class="sm">Score 0–100 = 40% how many mention it, 35% share negative, 25% share from the most recent 30% of dates. A decision-support estimate, not a measured outcome.</p></div>
+<div class="grid"><div class="box"><h2>Sentiment</h2><div id="sent"></div></div><div class="box"><h2>Feedback per month</h2><div id="vol"></div></div></div>
+<div class="box"><h2>Ask your feedback</h2><div class="bar" style="margin:0 0 8px"><input id="q" style="flex:1" placeholder="e.g. Why are people unhappy with pricing?" aria-label="Question"><button id="ask">Ask</button></div><div id="ans" aria-live="polite"></div></div>
+<div class="box"><h2>Feedback explorer</h2><div class="bar" style="justify-content:flex-start"><input id="s" placeholder="Search text" aria-label="Search"><select id="fs" aria-label="Sentiment"><option value="">All sentiments</option><option>positive</option><option>negative</option><option>mixed</option><option>neutral</option></select><select id="ft" aria-label="Theme"></select><button class="g" id="ex">Export CSV</button></div><div class="sm" id="cnt"></div><div class="tw"><table id="tb"></table></div></div>
+</div></main>
+<script>
+const DEMO="date,source,rating,text\n2026-08-03,App Store,2,\"The dashboard is slow to load, and it crashes when I open large reports.\"\n2026-08-07,Survey,5,\"Love the clean design, setup was easy and fast.\"\n2026-08-12,Support ticket,1,\"Pricing is too expensive for a small team, we may cancel.\"\n2026-08-15,Email,3,\"Please add a Slack integration. Would love automatic weekly summaries.\"\n2026-08-19,App Store,2,\"Onboarding is confusing, I could not find the tutorial anywhere.\"\n2026-08-24,Survey,4,\"Support agent was helpful and the response was quick.\"\n2026-08-28,Support ticket,1,\"Export fails with an error every time, very frustrating.\"\n2026-09-02,App Store,2,\"Search is laggy and the app freezes on my phone.\"\n2026-09-05,Survey,5,\"Great product, the insights are clear and the interface is intuitive.\"\n2026-09-09,Email,2,\"Billing plan options are limited and the price keeps going up.\"\n2026-09-13,Support ticket,2,\"Support took three days to reply to my ticket, bad experience.\"\n2026-09-16,App Store,1,\"Crashes on launch after the last update. Broken.\"\n2026-09-18,Survey,3,\"Good features but the navigation is hard to follow, and it is slow.\"\n2026-09-21,Email,3,\"Missing a CSV export for filtered views. Please add it.\"\n2026-09-24,App Store,4,\"Setup was smooth and the tutorial helped a lot.\"\n2026-09-27,Support ticket,1,\"The sync bug deletes my data. Terrible, please fix urgently.\"\n2026-09-30,Survey,2,\"Too expensive compared to alternatives, but the design is great.\"\n2026-10-03,App Store,2,\"Dashboard is slow again, loading takes forever.\"\n2026-10-06,Email,3,\"Wish there was an API integration and dark mode.\"\n2026-10-09,Support ticket,1,\"App crashes during export, error message is unclear.\"\n2026-10-12,Survey,4,\"Easy to use, fast, and the support team was excellent.\"\n2026-10-15,App Store,2,\"Pricing page is confusing and the plan limits are unclear.\"\n2026-10-18,Support ticket,2,\"Getting started guide is missing steps, onboarding was hard.\"\n2026-10-22,App Store,1,\"Dashboard is slow again, loading takes forever.\"\n";
+const POS=/\b(love|great|easy|fast|helpful|excellent|amazing|intuitive|smooth|reliable|happy|good|clear|perfect|quick)\b/gi,NEG=/\b(slow|crash|crashes|bug|bugs|broken|confusing|expensive|hard|difficult|terrible|annoying|missing|fails|frustrating|bad|lag|laggy|error|cancel|unclear|freezes|deletes)\b/gi;
+const TH={Performance:/slow|lag|fast|speed|load|freez/i,Pricing:/pric|expensive|cost|plan|billing/i,Onboarding:/onboard|setup|tutorial|getting started/i,Support:/support|agent|response|ticket/i,Reliability:/crash|bug|error|broken|fail|sync/i,'Feature requests':/wish|would love|please add|missing|integration/i,Usability:/confus|intuitive|design|interface|navigation|easy|hard/i};
+const COL={positive:'var(--pos)',negative:'var(--neg)',neutral:'var(--neu)',mixed:'var(--mix)'},$=i=>document.getElementById(i),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let R=[];
+function parseCSV(s){const r=[];let row=[],f='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(q){if(c=='"'){if(s[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){row.push(f);f=''}else if(c=='\n'||c=='\r'){if(c=='\r'&&s[i+1]=='\n')i++;row.push(f);r.push(row);row=[];f=''}else f+=c}if(f||row.length){row.push(f);r.push(row)}return r.filter(x=>x.some(y=>y.trim()))}
+function load(csv){const t=parseCSV(csv);if(t.length<2){$('note').textContent='No data rows found. The first row must be a header.';return}
+const h=t[0].map(x=>x.trim().toLowerCase()),fi=re=>h.findIndex(x=>re.test(x)),ti=fi(/text|feedback|review|comment|message/);
+if(ti<0){$('note').textContent='No text column found. Name one column text, feedback, review or comment.';return}
+const di=fi(/date|time/),si=fi(/source|channel/),ri=fi(/rating|score|stars/);
+let all=t.slice(1).map((r,i)=>({id:i+1,text:(r[ti]||'').trim(),date:di<0?'':(r[di]||'').trim().slice(0,10),source:si<0?'':(r[si]||'').trim(),rating:ri<0?'':(r[ri]||'').trim()})).filter(x=>x.text);
+const seen=new Set();R=all.filter(x=>{const k=x.text.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+R.forEach(x=>{const p=(x.text.match(POS)||[]).length,n=(x.text.match(NEG)||[]).length;x.sent=p&&n?'mixed':p?'positive':n?'negative':'neutral';x.themes=Object.keys(TH).filter(k=>TH[k].test(x.text));if(!x.themes.length)x.themes=['Other']});
+$('note').textContent=`Loaded ${R.length} records (${t.length-1-R.length} skipped as empty or duplicate). Sentiment and themes come from keyword rules, not an AI model.`;$('app').hidden=false;render()}
+function bars(o,tot,cf){return Object.entries(o).map(([k,v])=>`<div class="row"><span>${esc(k)}</span><div class="t"><i style="width:${100*v/tot}%;background:${cf(k)}"></i></div><span>${v}</span></div>`).join('')}
+function render(){const ds=R.map(x=>x.date).filter(Boolean).sort(),cut=ds.length?ds[Math.floor(ds.length*.7)]:'',th={};
+R.forEach(x=>x.themes.forEach(k=>{const o=th[k]=th[k]||{n:0,neg:0,rec:0};o.n++;if(x.sent=='negative')o.neg++;if(cut&&x.date>=cut)o.rec++}));
+const mx=Math.max(...Object.values(th).map(o=>o.n)),P=Object.entries(th).map(([k,o])=>({k,...o,sc:Math.round(100*(.4*o.n/mx+.35*o.neg/o.n+.25*o.rec/o.n))})).sort((a,b)=>b.sc-a.sc);
+$('pri').innerHTML='<tr><th>Theme</th><th>Mentions</th><th>Negative</th><th>Score</th></tr>'+P.map(p=>`<tr><td>${esc(p.k)}</td><td>${p.n}</td><td>${p.neg}</td><td><b>${p.sc}</b></td></tr>`).join('');
+const sc={};R.forEach(x=>sc[x.sent]=(sc[x.sent]||0)+1);$('sent').innerHTML=bars(sc,R.length,k=>COL[k]);
+const m={};R.forEach(x=>{if(x.date)m[x.date.slice(0,7)]=(m[x.date.slice(0,7)]||0)+1});const mk=Object.keys(m).sort(),vm={};mk.forEach(k=>vm[k]=m[k]);
+$('vol').innerHTML=mk.length?bars(vm,Math.max(...mk.map(k=>m[k])),()=>'var(--ac)'):'No dates in this file, so no trend is shown.';
+$('ft').innerHTML='<option value="">All themes</option>'+P.map(p=>`<option>${esc(p.k)}</option>`).join('');table()}
+function view(){const q=$('s').value.toLowerCase(),s=$('fs').value,t=$('ft').value;return R.filter(x=>(!q||x.text.toLowerCase().includes(q))&&(!s||x.sent==s)&&(!t||x.themes.includes(t)))}
+function table(){const v=view();$('cnt').textContent=`Showing ${v.length} of ${R.length}`;$('tb').innerHTML=v.length?'<tr><th>Date</th><th>Source</th><th>Sentiment</th><th>Themes</th><th>Feedback</th></tr>'+v.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.source)}</td><td><span class="tag" style="background:${COL[x.sent]}">${x.sent}</span></td><td>${esc(x.themes.join(', '))}</td><td>${esc(x.text)}</td></tr>`).join(''):'<tr><td>No feedback matches these filters. Clear a filter to see more.</td></tr>'}
+['s','fs','ft'].forEach(i=>$(i).addEventListener('input',table));
+$('ex').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',c=['id,date,source,rating,sentiment,themes,text',...view().map(x=>[x.id,x.date,x.source,x.rating,x.sent,x.themes.join('; '),x.text].map(q).join(','))].join('\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download='feedback-export.csv';a.click()};
+const STOP=new Set('the and for with this that are was but not have has had very you your they from what why how'.split(' ')),tok=s=>(s.toLowerCase().match(/[a-z]{3,}/g)||[]).filter(w=>!STOP.has(w)).map(w=>w.replace(/(ing|ed|es|s)$/,''));
+function retrieve(q){const d=R.map(x=>tok(x.text)),df={};d.forEach(a=>new Set(a).forEach(w=>df[w]=(df[w]||0)+1));const qt=tok(q);
+return R.map((x,i)=>({...x,sc:qt.reduce((a,w)=>a+(df[w]?d[i].filter(z=>z==w).length*Math.log(1+R.length/df[w]):0),0)})).filter(x=>x.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,4)}
+$('ask').onclick=async()=>{const q=$('q').value.trim();if(!q)return;const hits=retrieve(q);if(!hits.length){$('ans').textContent='No matching feedback found. Try different words.';return}
+const ev='<div><b>Evidence</b></div>'+hits.map(h=>`<div class="ev">#${h.id}: ${esc(h.text)}</div>`).join('');$('ans').textContent='Searching…';let a;
+try{const r=await fetch('/.netlify/functions/ask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,passages:hits.map(h=>`#${h.id}: ${h.text}`)})});const j=await r.json();if(!r.ok)throw 0;a='<p><b>Claude’s answer</b> (from the reviews below only)</p><p>'+esc(j.answer)+'</p>'}catch{a='<p class="sm">AI answers are not connected in this demo, so these are the most relevant reviews found by search (retrieval only).</p>'}
+$('ans').innerHTML=a+ev};
+$('demo').onclick=()=>load(DEMO);$('f').onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size>2e6){$('note').textContent='File is over 2 MB. Split it and try again.';return}f.text().then(load)};
+</script></body></html>
