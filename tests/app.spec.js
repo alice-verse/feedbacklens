@@ -22,9 +22,9 @@ test('rejects an unsupported file with a clear error', async ({ page }) => {
 });
 test('search narrows the feedback table', async ({ page }) => {
   await demo(page);
-  await expect(page.locator('#cnt')).toHaveText('Showing 23 of 23');
+  await expect(page.locator('#cnt')).toHaveText('Showing 24 of 24');
   await page.locator('#s').fill('pricing');
-  await expect(page.locator('#cnt')).not.toHaveText('Showing 23 of 23');
+  await expect(page.locator('#cnt')).not.toHaveText('Showing 24 of 24');
 });
 test('exports filtered feedback as CSV', async ({ page }) => {
   await demo(page);
