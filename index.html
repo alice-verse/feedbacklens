@@ -15,36 +15,54 @@ input,select{background:var(--s);border:1px solid var(--ln);border-radius:6px;pa
 .row{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:5px 0}.t{height:10px;background:var(--ln);border-radius:5px;overflow:hidden}.t i{display:block;height:100%}
 .tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--ln);vertical-align:top}
 .tag{padding:1px 7px;border-radius:9px;color:#fff;font-size:12px}.ev{border-top:1px solid var(--ln);padding:6px 0;font-size:13px}.sm{font-size:12px;color:var(--mut)}
+.hero{background:#14213D;color:#fff;padding:20px;border-radius:12px;margin-bottom:16px}.hero .sm{color:#B9C4DA}.hero h1{font-size:28px;letter-spacing:-.3px}
+.hero input[type=file]{color:#fff;max-width:230px}.hero button.g{color:#fff;border-color:#3A4B72}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.chip{font-size:12px;border:1px solid #3A4B72;border-radius:12px;padding:2px 9px;color:#DCE4F5}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px}.kpi{background:var(--s);border:1px solid var(--ln);border-radius:8px;padding:12px 14px;min-width:0}.kpi b{display:block;font-size:22px;line-height:1.3;overflow-wrap:anywhere}.kpi span{font-size:12px;color:var(--mut)}
+.box{box-shadow:0 1px 2px rgba(20,33,61,.07)}.err{border-left-color:var(--neg)!important;color:var(--neg)!important}
+[hidden]{display:none!important}
 </style></head><body><main>
-<div class="bar"><div><h1>FeedbackLens AI</h1><div class="sm">Turn customer feedback into a ranked list of what to fix first.</div></div>
-<div><input type="file" id="f" accept=".csv" aria-label="Upload CSV file"> <button class="g" id="demo">Load demo data</button></div></div>
-<div class="note" id="note" aria-live="polite">Upload a CSV with a text column (optional: date, source, rating), or load the demo data.</div>
-<div id="app" hidden>
+<div class="hero"><div class="bar" style="margin:0"><div><h1>FeedbackLens AI</h1><div class="sm">Turn customer feedback into a ranked list of what to fix first.</div></div><div><input type="file" id="f" accept=".csv,.xlsx,.xls" aria-label="Upload CSV or Excel file"> <button class="g" id="demo">Load demo data</button></div></div><div class="chips"><span class="chip">Sentiment and themes: keyword rules</span><span class="chip">Search: TF-IDF retrieval</span><span class="chip" id="aichip">AI answers: checking…</span></div></div>
+<div class="note" id="note" aria-live="polite">Upload a CSV or Excel file (one column of feedback text; date, source and rating are optional), or load the demo data.</div>
+<div class="box" id="cloud"><h2>Cloud save (Supabase)</h2><div class="sm" id="cstat">Checking…</div>
+<div id="cauth" class="bar" hidden style="justify-content:flex-start;margin:8px 0 0"><input id="em" type="email" placeholder="Email" aria-label="Email" autocomplete="email"><input id="pw" type="password" placeholder="Password (min 6)" aria-label="Password" autocomplete="current-password"><button id="si">Sign in</button><button class="g" id="su">Sign up</button></div>
+<div id="cuser" class="bar" hidden style="justify-content:flex-start;margin:8px 0 0"><button id="sv">Save current data</button><button class="g" id="so">Sign out</button></div>
+<div class="tw" id="dl"></div></div>
+<div id="app" hidden><div class="kpis" id="kpi"></div><div class="box" id="mapbox"><b>Feedback column:</b> <select id="col" aria-label="Feedback column"></select> <span class="sm">Wrong column? Pick the one that holds the review text.</span></div>
 <div class="box"><h2>What to fix first</h2><div class="tw"><table id="pri"></table></div><p class="sm">Score 0–100 = 40% how many mention it, 35% share negative, 25% share from the most recent 30% of dates. A decision-support estimate, not a measured outcome.</p></div>
 <div class="grid"><div class="box"><h2>Sentiment</h2><div id="sent"></div></div><div class="box"><h2>Feedback per month</h2><div id="vol"></div></div></div>
 <div class="box"><h2>Ask your feedback</h2><div class="bar" style="margin:0 0 8px"><input id="q" style="flex:1" placeholder="e.g. Why are people unhappy with pricing?" aria-label="Question"><button id="ask">Ask</button></div><div id="ans" aria-live="polite"></div></div>
 <div class="box"><h2>Feedback explorer</h2><div class="bar" style="justify-content:flex-start"><input id="s" placeholder="Search text" aria-label="Search"><select id="fs" aria-label="Sentiment"><option value="">All sentiments</option><option>positive</option><option>negative</option><option>mixed</option><option>neutral</option></select><select id="ft" aria-label="Theme"></select><button class="g" id="ex">Export CSV</button></div><div class="sm" id="cnt"></div><div class="tw"><table id="tb"></table></div></div>
 </div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+let rawCSV='',CUR='';
 const DEMO="date,source,rating,text\n2026-08-03,App Store,2,\"The dashboard is slow to load, and it crashes when I open large reports.\"\n2026-08-07,Survey,5,\"Love the clean design, setup was easy and fast.\"\n2026-08-12,Support ticket,1,\"Pricing is too expensive for a small team, we may cancel.\"\n2026-08-15,Email,3,\"Please add a Slack integration. Would love automatic weekly summaries.\"\n2026-08-19,App Store,2,\"Onboarding is confusing, I could not find the tutorial anywhere.\"\n2026-08-24,Survey,4,\"Support agent was helpful and the response was quick.\"\n2026-08-28,Support ticket,1,\"Export fails with an error every time, very frustrating.\"\n2026-09-02,App Store,2,\"Search is laggy and the app freezes on my phone.\"\n2026-09-05,Survey,5,\"Great product, the insights are clear and the interface is intuitive.\"\n2026-09-09,Email,2,\"Billing plan options are limited and the price keeps going up.\"\n2026-09-13,Support ticket,2,\"Support took three days to reply to my ticket, bad experience.\"\n2026-09-16,App Store,1,\"Crashes on launch after the last update. Broken.\"\n2026-09-18,Survey,3,\"Good features but the navigation is hard to follow, and it is slow.\"\n2026-09-21,Email,3,\"Missing a CSV export for filtered views. Please add it.\"\n2026-09-24,App Store,4,\"Setup was smooth and the tutorial helped a lot.\"\n2026-09-27,Support ticket,1,\"The sync bug deletes my data. Terrible, please fix urgently.\"\n2026-09-30,Survey,2,\"Too expensive compared to alternatives, but the design is great.\"\n2026-10-03,App Store,2,\"Dashboard is slow again, loading takes forever.\"\n2026-10-06,Email,3,\"Wish there was an API integration and dark mode.\"\n2026-10-09,Support ticket,1,\"App crashes during export, error message is unclear.\"\n2026-10-12,Survey,4,\"Easy to use, fast, and the support team was excellent.\"\n2026-10-15,App Store,2,\"Pricing page is confusing and the plan limits are unclear.\"\n2026-10-18,Support ticket,2,\"Getting started guide is missing steps, onboarding was hard.\"\n2026-10-22,App Store,1,\"Dashboard is slow again, loading takes forever.\"\n";
 const POS=/\b(love|great|easy|fast|helpful|excellent|amazing|intuitive|smooth|reliable|happy|good|clear|perfect|quick)\b/gi,NEG=/\b(slow|crash|crashes|bug|bugs|broken|confusing|expensive|hard|difficult|terrible|annoying|missing|fails|frustrating|bad|lag|laggy|error|cancel|unclear|freezes|deletes)\b/gi;
 const TH={Performance:/slow|lag|fast|speed|load|freez/i,Pricing:/pric|expensive|cost|plan|billing/i,Onboarding:/onboard|setup|tutorial|getting started/i,Support:/support|agent|response|ticket/i,Reliability:/crash|bug|error|broken|fail|sync/i,'Feature requests':/wish|would love|please add|missing|integration/i,Usability:/confus|intuitive|design|interface|navigation|easy|hard/i};
 const COL={positive:'var(--pos)',negative:'var(--neg)',neutral:'var(--neu)',mixed:'var(--mix)'},$=i=>document.getElementById(i),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let R=[];
 function parseCSV(s){const r=[];let row=[],f='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(q){if(c=='"'){if(s[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){row.push(f);f=''}else if(c=='\n'||c=='\r'){if(c=='\r'&&s[i+1]=='\n')i++;row.push(f);r.push(row);row=[];f=''}else f+=c}if(f||row.length){row.push(f);r.push(row)}return r.filter(x=>x.some(y=>y.trim()))}
-function load(csv){const t=parseCSV(csv);if(t.length<2){$('note').textContent='No data rows found. The first row must be a header.';return}
-const h=t[0].map(x=>x.trim().toLowerCase()),fi=re=>h.findIndex(x=>re.test(x)),ti=fi(/text|feedback|review|comment|message/);
-if(ti<0){$('note').textContent='No text column found. Name one column text, feedback, review or comment.';return}
-const di=fi(/date|time/),si=fi(/source|channel/),ri=fi(/rating|score|stars/);
-let all=t.slice(1).map((r,i)=>({id:i+1,text:(r[ti]||'').trim(),date:di<0?'':(r[di]||'').trim().slice(0,10),source:si<0?'':(r[si]||'').trim(),rating:ri<0?'':(r[ri]||'').trim()})).filter(x=>x.text);
+const nd=s=>{if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);const d=new Date(s);if(isNaN(d))return '';const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())};
+function msg(t,bad){$('note').textContent=t;$('note').classList.toggle('err',!!bad)}
+function load(csv,ti,name){const T=parseCSV(csv);if(T.length<2){msg('No data rows found. The first row must be a header.',1);return}
+const h=T[0].map(x=>String(x).trim()),hl=h.map(x=>x.toLowerCase()),fi=re=>hl.findIndex(x=>re.test(x));
+if(ti==null){ti=fi(/text|feedback|review|comment|message|response|description/);if(ti<0){const av=h.map((_,c)=>T.slice(1).reduce((a,r)=>a+(r[c]||'').length,0));ti=av.indexOf(Math.max(...av))}}
+const di=fi(/date|time|created/),si=fi(/source|channel|platform/),ri=fi(/rating|score|stars/);
+$('col').innerHTML=h.map((x,i)=>`<option value="${i}"${i==ti?' selected':''}>${esc(x||'Column '+(i+1))}</option>`).join('');
+const all=T.slice(1).map((r,i)=>({id:i+1,text:(r[ti]||'').trim(),date:di<0?'':nd((r[di]||'').trim()),source:si<0?'':(r[si]||'').trim(),rating:ri<0?'':(r[ri]||'').trim()})).filter(x=>x.text);
+if(!all.length){msg('That column has no text. Pick another feedback column.',1);return}
 const seen=new Set();R=all.filter(x=>{const k=x.text.toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
 R.forEach(x=>{const p=(x.text.match(POS)||[]).length,n=(x.text.match(NEG)||[]).length;x.sent=p&&n?'mixed':p?'positive':n?'negative':'neutral';x.themes=Object.keys(TH).filter(k=>TH[k].test(x.text));if(!x.themes.length)x.themes=['Other']});
-$('note').textContent=`Loaded ${R.length} records (${t.length-1-R.length} skipped as empty or duplicate). Sentiment and themes come from keyword rules, not an AI model.`;$('app').hidden=false;render()}
+CUR=name||'file';msg(`Loaded “${name||'file'}”: ${R.length} records from column “${h[ti]}” (${T.length-1-R.length} skipped as empty or duplicate). Sentiment and themes come from keyword rules, not an AI model.`);$('app').hidden=false;render()}
 function bars(o,tot,cf){return Object.entries(o).map(([k,v])=>`<div class="row"><span>${esc(k)}</span><div class="t"><i style="width:${100*v/tot}%;background:${cf(k)}"></i></div><span>${v}</span></div>`).join('')}
 function render(){const ds=R.map(x=>x.date).filter(Boolean).sort(),cut=ds.length?ds[Math.floor(ds.length*.7)]:'',th={};
 R.forEach(x=>x.themes.forEach(k=>{const o=th[k]=th[k]||{n:0,neg:0,rec:0};o.n++;if(x.sent=='negative')o.neg++;if(cut&&x.date>=cut)o.rec++}));
 const mx=Math.max(...Object.values(th).map(o=>o.n)),P=Object.entries(th).map(([k,o])=>({k,...o,sc:Math.round(100*(.4*o.n/mx+.35*o.neg/o.n+.25*o.rec/o.n))})).sort((a,b)=>b.sc-a.sc);
-$('pri').innerHTML='<tr><th>Theme</th><th>Mentions</th><th>Negative</th><th>Score</th></tr>'+P.map(p=>`<tr><td>${esc(p.k)}</td><td>${p.n}</td><td>${p.neg}</td><td><b>${p.sc}</b></td></tr>`).join('');
+$('pri').innerHTML='<tr><th>Theme</th><th>Mentions</th><th>Negative</th><th>Score</th></tr>'+P.map(p=>`<tr><td>${esc(p.k)}</td><td>${p.n}</td><td>${p.neg}</td><td style="min-width:130px"><b>${p.sc}</b><div class="t"><i style="width:${p.sc}%;background:var(--ac)"></i></div></td></tr>`).join('');
+const ng=R.filter(x=>x.sent=='negative').length;$('kpi').innerHTML=[[R.length,'Feedback records'],[Math.round(100*ng/R.length)+'%','Negative'],[P[0].k,'Top priority theme'],[P[0].sc,'Top score (0–100)']].map(([a,b])=>`<div class="kpi"><b>${esc(a)}</b><span>${b}</span></div>`).join('');
 const sc={};R.forEach(x=>sc[x.sent]=(sc[x.sent]||0)+1);$('sent').innerHTML=bars(sc,R.length,k=>COL[k]);
 const m={};R.forEach(x=>{if(x.date)m[x.date.slice(0,7)]=(m[x.date.slice(0,7)]||0)+1});const mk=Object.keys(m).sort(),vm={};mk.forEach(k=>vm[k]=m[k]);
 $('vol').innerHTML=mk.length?bars(vm,Math.max(...mk.map(k=>m[k])),()=>'var(--ac)'):'No dates in this file, so no trend is shown.';
@@ -60,5 +78,27 @@ $('ask').onclick=async()=>{const q=$('q').value.trim();if(!q)return;const hits=r
 const ev='<div><b>Evidence</b></div>'+hits.map(h=>`<div class="ev">#${h.id}: ${esc(h.text)}</div>`).join('');$('ans').textContent='Searching…';let a;
 try{const r=await fetch('/.netlify/functions/ask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,passages:hits.map(h=>`#${h.id}: ${h.text}`)})});const j=await r.json();if(!r.ok)throw 0;a='<p><b>Claude’s answer</b> (from the reviews below only)</p><p>'+esc(j.answer)+'</p>'}catch{a='<p class="sm">AI answers are not connected in this demo, so these are the most relevant reviews found by search (retrieval only).</p>'}
 $('ans').innerHTML=a+ev};
-$('demo').onclick=()=>load(DEMO);$('f').onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size>2e6){$('note').textContent='File is over 2 MB. Split it and try again.';return}f.text().then(load)};
+$('demo').onclick=()=>{rawCSV=DEMO;load(DEMO,null,'Demo data (sample)')};
+$('col').onchange=e=>load(rawCSV,+e.target.value,'selected file');
+$('f').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(f.size>5e6){msg('File is over 5 MB. Split it and try again.',1);return}
+try{const n=f.name.toLowerCase();if(/\.(xlsx|xls)$/.test(n)){if(!window.XLSX){msg('Excel reader did not load. Check your internet connection or save the file as CSV.',1);return}const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});rawCSV=XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]])}else if(n.endsWith('.csv')){rawCSV=await f.text()}else{msg('Unsupported file type. Use .csv, .xlsx or .xls.',1);return}load(rawCSV,null,f.name)}catch(x){msg('Could not read that file. Try saving it as CSV and upload again.',1)}};
+fetch('/.netlify/functions/ask',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}).then(r=>{$('aichip').textContent=r.status==400?'AI answers: Claude connected':'AI answers: not connected'}).catch(()=>{$('aichip').textContent='AI answers: not connected'});
+let sb=null;const CFG=window.FL_CONFIG||{};
+const toCSV=rows=>['date,source,rating,text',...rows.map(x=>[x.date||'',x.source||'',x.rating??'',x.text].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(','))].join('\n');
+const cs=t=>{$('cstat').textContent=t};
+async function setSes(s){$('cauth').hidden=!!s;$('cuser').hidden=!s;if(s){cs('Signed in as '+s.user.email);await list()}else{cs('Sign in to save datasets to your private cloud space.');$('dl').innerHTML=''}}
+async function list(){const{data,error}=await sb.from('datasets').select('id,name,row_count,created_at').order('created_at',{ascending:false});if(error){cs('Could not load datasets: '+error.message);return}
+$('dl').innerHTML=data.length?'<table><tr><th>Name</th><th>Rows</th><th>Saved</th><th></th></tr>'+data.map(d=>`<tr><td>${esc(d.name)}</td><td>${d.row_count}</td><td>${d.created_at.slice(0,10)}</td><td><button class="g" data-open="${d.id}" data-name="${esc(d.name)}">Open</button> <button class="g" data-del="${d.id}">Delete</button></td></tr>`).join('')+'</table>':'<p class="sm">No saved datasets yet.</p>'}
+$('dl').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+if(b.dataset.del){if(!confirm('Delete this dataset and its records?'))return;const{error}=await sb.from('datasets').delete().eq('id',b.dataset.del);cs(error?'Delete failed: '+error.message:'Dataset deleted.');await list()}
+if(b.dataset.open){const{data,error}=await sb.from('feedback_items').select('text,item_date,source,rating').eq('dataset_id',b.dataset.open).order('id').limit(5000);if(error){cs('Open failed: '+error.message);return}rawCSV=toCSV(data.map(x=>({date:x.item_date,source:x.source,rating:x.rating,text:x.text})));load(rawCSV,null,b.dataset.name)}};
+$('sv').onclick=async()=>{if(!R.length){cs('Load some feedback first, then save it.');return}if(R.length>5000){cs('Too many rows to save (limit 5000).');return}
+cs('Saving…');const{data:d,error}=await sb.from('datasets').insert({name:(CUR||'Dataset').slice(0,200),row_count:R.length}).select('id').single();if(error){cs('Save failed: '+error.message);return}
+for(let i=0;i<R.length;i+=500){const rows=R.slice(i,i+500).map(x=>({dataset_id:d.id,text:x.text.slice(0,5000),item_date:x.date||null,source:x.source||null,rating:isNaN(parseFloat(x.rating))?null:parseFloat(x.rating)}));const{error:e2}=await sb.from('feedback_items').insert(rows);if(e2){await sb.from('datasets').delete().eq('id',d.id);cs('Save failed, nothing was kept: '+e2.message);return}}
+cs('Saved “'+CUR+'” ('+R.length+' rows).');await list()};
+const cred=()=>({email:$('em').value.trim(),password:$('pw').value});
+$('si').onclick=async()=>{const{error}=await sb.auth.signInWithPassword(cred());if(error)cs('Sign in failed: '+error.message)};
+$('su').onclick=async()=>{const{data,error}=await sb.auth.signUp(cred());cs(error?'Sign up failed: '+error.message:data.session?'Account created.':'Account created. Check your email to confirm, then sign in.')};
+$('so').onclick=()=>sb.auth.signOut();
+if(CFG.supabaseUrl&&CFG.supabaseAnonKey&&window.supabase){sb=supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);sb.auth.getSession().then(({data})=>setSes(data.session));sb.auth.onAuthStateChange((_,s)=>setSes(s))}else{cs('Cloud save is not configured yet. Add your Supabase URL and anon key to config.js (steps in README).')}
 </script></body></html>
