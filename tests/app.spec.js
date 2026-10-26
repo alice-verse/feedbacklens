@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const CSV = 'date,source,rating,text\n2026-09-01,App,2,"Slow and crashes, frustrating"\n2026-09-02,App,5,Love the clean design\n';
 const demo = async page => { await page.goto('/'); await page.getByRole('button', { name: 'Load demo data' }).click(); };
+const cfg = (page, body) => page.route('**/config.js', r => r.fulfill({ contentType: 'application/javascript', body }));
 
 test('demo data fills the dashboard', async ({ page }) => {
   await demo(page);
@@ -39,6 +40,13 @@ test('ask shows evidence and says when AI is not connected', async ({ page }) =>
   await expect(page.locator('#ans')).toContainText('Evidence');
 });
 test('cloud save explains it is not configured', async ({ page }) => {
+  await cfg(page, 'window.FL_CONFIG={};');
   await page.goto('/');
   await expect(page.locator('#cstat')).toContainText('not configured');
+});
+test('cloud save shows the sign-in form when configured', async ({ page }) => {
+  await cfg(page, "window.FL_CONFIG={supabaseUrl:'https://example.supabase.co',supabaseAnonKey:'fake-key'};");
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  await expect(page.locator('#cstat')).toContainText('Sign in to save');
 });
